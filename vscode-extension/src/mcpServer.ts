@@ -689,9 +689,73 @@ export class MCPServer {
             vertical-align: middle;
         }
         @keyframes spin { to { transform: rotate(360deg); } }
+        .attachments-area {
+            margin-bottom: 15px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+        .attachment-item {
+            background: rgba(0, 212, 255, 0.2);
+            border: 1px solid rgba(0, 212, 255, 0.4);
+            border-radius: 6px;
+            padding: 6px 10px;
+            font-size: 12px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .attachment-item img {
+            max-width: 60px;
+            max-height: 40px;
+            border-radius: 4px;
+        }
+        .attachment-remove {
+            cursor: pointer;
+            color: #ff6666;
+            font-weight: bold;
+        }
+        .upload-area {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+        .upload-btn {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px dashed rgba(255, 255, 255, 0.3);
+            border-radius: 6px;
+            padding: 8px 12px;
+            font-size: 12px;
+            color: #aaa;
+            cursor: pointer;
+            flex: 1;
+            text-align: center;
+        }
+        .upload-btn:hover {
+            background: rgba(255, 255, 255, 0.15);
+            border-color: #00d4ff;
+            color: #00d4ff;
+        }
+        .drop-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 212, 255, 0.2);
+            border: 3px dashed #00d4ff;
+            display: none;
+            justify-content: center;
+            align-items: center;
+            font-size: 24px;
+            color: #00d4ff;
+            z-index: 1000;
+        }
+        .drop-overlay.active { display: flex; }
     </style>
 </head>
 <body>
+    <div class="drop-overlay" id="dropOverlay">📎 拖放文件到这里</div>
     <div class="container">
         <div class="header">
             <h1>🤖 AI Chat HITL</h1>
@@ -704,7 +768,14 @@ export class MCPServer {
                 ${this.escapeHtml(pending.reason)}
             </div>
             <div id="inputArea">
-                <textarea id="userInput" placeholder="输入您的指令或反馈..."></textarea>
+                <div class="upload-area">
+                    <label class="upload-btn" for="fileInput">📁 上传文件</label>
+                    <label class="upload-btn" for="imageInput">🖼️ 上传图片</label>
+                    <input type="file" id="fileInput" multiple style="display:none">
+                    <input type="file" id="imageInput" accept="image/*" multiple style="display:none">
+                </div>
+                <div class="attachments-area" id="attachmentsArea"></div>
+                <textarea id="userInput" placeholder="输入您的指令或反馈...（支持拖拽文件、Ctrl+V粘贴图片）"></textarea>
                 <div class="btn-group">
                     <button id="continueBtn" class="btn-continue" onclick="respond(true)">✅ 继续对话</button>
                     <button id="endBtn" class="btn-end" onclick="respond(false)">❌ 结束对话</button>
@@ -722,6 +793,96 @@ export class MCPServer {
         let isResponded = false;
         let currentDialogId = '${dialogId}';
         const workspace = '${pending.workspace.replace(/\\/g, '\\\\')}';
+        let attachments = [];
+        
+        // 文件处理
+        function readFileAsBase64(file, type) {
+            return new Promise((resolve) => {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const att = {
+                        type: type,
+                        name: file.name,
+                        content: e.target.result
+                    };
+                    attachments.push(att);
+                    renderAttachments();
+                    resolve(att);
+                };
+                if (type === 'image') {
+                    reader.readAsDataURL(file);
+                } else {
+                    reader.readAsText(file);
+                }
+            });
+        }
+        
+        function renderAttachments() {
+            const area = document.getElementById('attachmentsArea');
+            area.innerHTML = attachments.map((att, i) => {
+                if (att.type === 'image' && att.content.startsWith('data:')) {
+                    return '<div class="attachment-item"><img src="' + att.content + '"><span>' + escapeHtml(att.name) + '</span><span class="attachment-remove" onclick="removeAttachment(' + i + ')">×</span></div>';
+                }
+                return '<div class="attachment-item"><span>📎 ' + escapeHtml(att.name) + '</span><span class="attachment-remove" onclick="removeAttachment(' + i + ')">×</span></div>';
+            }).join('');
+        }
+        
+        function removeAttachment(index) {
+            attachments.splice(index, 1);
+            renderAttachments();
+        }
+        
+        // 文件上传
+        document.getElementById('fileInput').addEventListener('change', (e) => {
+            for (const file of e.target.files) {
+                readFileAsBase64(file, 'file');
+            }
+            e.target.value = '';
+        });
+        
+        document.getElementById('imageInput').addEventListener('change', (e) => {
+            for (const file of e.target.files) {
+                readFileAsBase64(file, 'image');
+            }
+            e.target.value = '';
+        });
+        
+        // 拖拽处理
+        const dropOverlay = document.getElementById('dropOverlay');
+        document.addEventListener('dragenter', (e) => {
+            e.preventDefault();
+            dropOverlay.classList.add('active');
+        });
+        dropOverlay.addEventListener('dragleave', (e) => {
+            e.preventDefault();
+            dropOverlay.classList.remove('active');
+        });
+        dropOverlay.addEventListener('dragover', (e) => {
+            e.preventDefault();
+        });
+        dropOverlay.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropOverlay.classList.remove('active');
+            for (const file of e.dataTransfer.files) {
+                const type = file.type.startsWith('image/') ? 'image' : 'file';
+                readFileAsBase64(file, type);
+            }
+        });
+        
+        // 剪贴板粘贴
+        document.addEventListener('paste', (e) => {
+            const items = e.clipboardData?.items;
+            if (!items) return;
+            for (const item of items) {
+                if (item.type.startsWith('image/')) {
+                    e.preventDefault();
+                    const file = item.getAsFile();
+                    if (file) {
+                        readFileAsBase64(file, 'image');
+                    }
+                }
+            }
+        });
         
         async function respond(shouldContinue) {
             if (isResponded) return;
@@ -738,7 +899,7 @@ export class MCPServer {
                         dialogId: currentDialogId,
                         shouldContinue: shouldContinue,
                         userInput: userInput,
-                        attachments: []
+                        attachments: attachments
                     })
                 });
                 
@@ -804,8 +965,10 @@ export class MCPServer {
             document.getElementById('endBtn').disabled = false;
             document.getElementById('userInput').focus();
             
-            // 重置响应状态
+            // 重置响应状态和附件
             isResponded = false;
+            attachments = [];
+            renderAttachments();
         }
         
         function escapeHtml(text) {
