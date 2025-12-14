@@ -455,7 +455,9 @@ export class MCPServer {
                     try {
                         const response = await this.callDialogInternal(reason || '', workspace || '');
                         
+                        const contentItems: any[] = [];
                         let resultText: string;
+                        
                         if (response.shouldContinue) {
                             resultText = `用户选择继续，并提供了新指令:\n${response.userInput}\n\n请立即执行用户的新指令。`;
                             
@@ -463,9 +465,18 @@ export class MCPServer {
                                 resultText += '\n\n附件信息:\n';
                                 for (const att of response.attachments) {
                                     if (att.type === 'image') {
-                                        // 传递图片的 base64 内容，AI 可以读取
+                                        // 图片作为单独的 image 类型内容项
                                         if (att.content && att.content.startsWith('data:')) {
-                                            resultText += `- [图片] ${att.name}\n图片数据(base64): ${att.content}\n`;
+                                            resultText += `- [图片] ${att.name} (见下方图片)\n`;
+                                            // 提取 base64 数据和 mime 类型
+                                            const matches = att.content.match(/^data:([^;]+);base64,(.+)$/);
+                                            if (matches) {
+                                                contentItems.push({
+                                                    type: 'image',
+                                                    data: matches[2],
+                                                    mimeType: matches[1]
+                                                });
+                                            }
                                         } else {
                                             resultText += `- [图片] ${att.name}\n`;
                                         }
@@ -480,16 +491,17 @@ export class MCPServer {
                             resultText = '用户选择结束对话。请立即停止所有操作，不要继续执行任何任务。';
                         }
 
+                        // 文本内容放在最前面
+                        contentItems.unshift({
+                            type: 'text',
+                            text: resultText
+                        });
+
                         return {
                             jsonrpc: '2.0',
                             id: request.id,
                             result: {
-                                content: [
-                                    {
-                                        type: 'text',
-                                        text: resultText
-                                    }
-                                ]
+                                content: contentItems
                             }
                         };
                     } catch (error) {
@@ -863,11 +875,24 @@ export class MCPServer {
         dropOverlay.addEventListener('drop', (e) => {
             e.preventDefault();
             dropOverlay.classList.remove('active');
+            const userInput = document.getElementById('userInput');
             for (const file of e.dataTransfer.files) {
                 const type = file.type.startsWith('image/') ? 'image' : 'file';
                 readFileAsBase64(file, type);
+                // 在输入框光标位置插入 @filename
+                insertAtCursor(userInput, '@' + file.name + ' ');
             }
         });
+        
+        // 在光标位置插入文本
+        function insertAtCursor(element, text) {
+            const start = element.selectionStart;
+            const end = element.selectionEnd;
+            const value = element.value;
+            element.value = value.substring(0, start) + text + value.substring(end);
+            element.selectionStart = element.selectionEnd = start + text.length;
+            element.focus();
+        }
         
         // 剪贴板粘贴
         document.addEventListener('paste', (e) => {

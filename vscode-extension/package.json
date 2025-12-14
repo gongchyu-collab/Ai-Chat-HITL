@@ -2,7 +2,7 @@
   "name": "ai-chat-hitl-extension",
   "displayName": "AI Chat HITL Extension",
   "description": "VSCode extension for AI chat human-in-the-loop continuation with MCP Server",
-  "version": "1.18.0",
+  "version": "1.19.0",
   "publisher": "ai-chat-hitl",
   "engines": {
     "vscode": "^1.85.0"
