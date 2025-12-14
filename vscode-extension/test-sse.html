@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Chat HITL - SSE MCP 测试</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            min-height: 100vh;
+            padding: 20px;
+            color: #e0e0e0;
+        }
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+        h1 {
+            text-align: center;
+            margin-bottom: 30px;
+            color: #00d4ff;
+            font-size: 28px;
+        }
+        .card {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .card h2 {
+            font-size: 18px;
+            margin-bottom: 15px;
+            color: #00d4ff;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .status {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: 500;
+        }
+        .status.connected {
+            background: rgba(0, 255, 136, 0.2);
+            color: #00ff88;
+        }
+        .status.disconnected {
+            background: rgba(255, 68, 68, 0.2);
+            color: #ff4444;
+        }
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+        .status.connected .status-dot {
+            background: #00ff88;
+        }
+        .status.disconnected .status-dot {
+            background: #ff4444;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+            color: #aaa;
+        }
+        input, textarea {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 8px;
+            background: rgba(0, 0, 0, 0.3);
+            color: #fff;
+            font-size: 14px;
+        }
+        input:focus, textarea:focus {
+            outline: none;
+            border-color: #00d4ff;
+        }
+        textarea {
+            min-height: 80px;
+            resize: vertical;
+        }
+        .btn-group {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        button {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        .btn-primary {
+            background: linear-gradient(135deg, #00d4ff, #0099cc);
+            color: #000;
+        }
+        .btn-primary:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(0, 212, 255, 0.4);
+        }
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.1);
+            color: #fff;
+        }
+        .btn-secondary:hover:not(:disabled) {
+            background: rgba(255, 255, 255, 0.2);
+        }
+        .btn-danger {
+            background: linear-gradient(135deg, #ff4444, #cc0000);
+            color: #fff;
+        }
+        .btn-success {
+            background: linear-gradient(135deg, #00ff88, #00cc66);
+            color: #000;
+        }
+        .log-container {
+            background: rgba(0, 0, 0, 0.4);
+            border-radius: 8px;
+            padding: 15px;
+            max-height: 300px;
+            overflow-y: auto;
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 13px;
+        }
+        .log-entry {
+            padding: 8px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+        .log-entry:last-child {
+            border-bottom: none;
+        }
+        .log-time {
+            color: #666;
+            margin-right: 10px;
+        }
+        .log-type {
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            margin-right: 10px;
+        }
+        .log-type.info { background: #0066cc; }
+        .log-type.success { background: #00cc66; color: #000; }
+        .log-type.error { background: #cc0000; }
+        .log-type.request { background: #cc6600; }
+        .log-type.response { background: #6600cc; }
+        .log-type.sse { background: #00cccc; color: #000; }
+        pre {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 10px;
+            border-radius: 6px;
+            overflow-x: auto;
+            margin-top: 8px;
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+        .port-inputs {
+            display: flex;
+            gap: 15px;
+        }
+        .port-inputs .form-group {
+            flex: 1;
+        }
+        .info-box {
+            background: rgba(0, 212, 255, 0.1);
+            border-left: 3px solid #00d4ff;
+            padding: 12px 16px;
+            border-radius: 0 8px 8px 0;
+            margin-bottom: 20px;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🤖 AI Chat HITL - SSE MCP 测试工具</h1>
+
+        <div class="info-box">
+            <strong>⚠️ 使用前必读（v1.5.0 一体化架构）：</strong><br>
+            <b>步骤 1：</b> 确保 AI Chat HITL VSCode 插件已启动（状态栏显示端口）<br>
+            <b>步骤 2：</b> 点击下方"健康检查"验证服务器已启动<br>
+            <b>步骤 3：</b> 点击"连接 SSE"建立连接，然后测试工具调用<br>
+            <b>注意：</b> v1.5.0 起无需单独启动 SSE 服务器，插件内置 SSE 支持！
+        </div>
+
+        <div class="card">
+            <h2>⚙️ 连接设置</h2>
+            <div class="port-inputs">
+                <div class="form-group">
+                    <label>MCP SSE 端口</label>
+                    <input type="number" id="mcpPort" value="23987" placeholder="23987">
+                </div>
+                <div class="form-group">
+                    <label>HITL 插件端口（参考）</label>
+                    <input type="number" id="hitlPort" value="23987" placeholder="23987" disabled>
+                </div>
+            </div>
+            <div class="btn-group" style="margin-top: 15px;">
+                <button id="connectBtn" class="btn-primary" onclick="connectSSE()">🔌 连接 SSE</button>
+                <button id="disconnectBtn" class="btn-danger" onclick="disconnectSSE()" disabled>❌ 断开</button>
+                <button class="btn-secondary" onclick="checkHealth()">💓 健康检查</button>
+            </div>
+            <div style="margin-top: 15px;">
+                <span id="connectionStatus" class="status disconnected">
+                    <span class="status-dot"></span>
+                    未连接
+                </span>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>🛠️ MCP 操作</h2>
+            <div class="btn-group">
+                <button class="btn-secondary" onclick="sendInitialize()">📋 Initialize</button>
+                <button class="btn-secondary" onclick="sendToolsList()">🔧 List Tools</button>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>🎯 调用 AI_chat_HITL 工具</h2>
+            <div class="form-group">
+                <label>Reason (结束原因)</label>
+                <input type="text" id="reason" value="任务已完成，请确认是否继续" placeholder="输入结束原因">
+            </div>
+            <div class="form-group">
+                <label>Workspace (工作区路径)</label>
+                <input type="text" id="workspace" value="g:\\github_code\\mcp_tool" placeholder="输入工作区绝对路径">
+            </div>
+            <button class="btn-success" onclick="callHITLTool()">🚀 调用工具 (弹出对话框)</button>
+        </div>
+
+        <div class="card">
+            <h2>📜 日志</h2>
+            <button class="btn-secondary" onclick="clearLog()" style="margin-bottom: 15px;">🗑️ 清空日志</button>
+            <div id="logContainer" class="log-container">
+                <div class="log-entry">
+                    <span class="log-time">--:--:--</span>
+                    <span class="log-type info">INFO</span>
+                    等待操作...
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let eventSource = null;
+        let requestId = 1;
+
+        function getBaseUrl() {
+            const port = document.getElementById('mcpPort').value || '13579';
+            return `http://127.0.0.1:${port}`;
+        }
+
+        function log(type, message, data = null) {
+            const container = document.getElementById('logContainer');
+            const time = new Date().toLocaleTimeString();
+            let html = `
+                <div class="log-entry">
+                    <span class="log-time">${time}</span>
+                    <span class="log-type ${type}">${type.toUpperCase()}</span>
+                    ${message}
+            `;
+            if (data) {
+                html += `<pre>${JSON.stringify(data, null, 2)}</pre>`;
+            }
+            html += '</div>';
+            container.innerHTML = html + container.innerHTML;
+        }
+
+        function clearLog() {
+            document.getElementById('logContainer').innerHTML = '';
+            log('info', '日志已清空');
+        }
+
+        function updateConnectionStatus(connected) {
+            const status = document.getElementById('connectionStatus');
+            const connectBtn = document.getElementById('connectBtn');
+            const disconnectBtn = document.getElementById('disconnectBtn');
+            
+            if (connected) {
+                status.className = 'status connected';
+                status.innerHTML = '<span class="status-dot"></span> 已连接';
+                connectBtn.disabled = true;
+                disconnectBtn.disabled = false;
+            } else {
+                status.className = 'status disconnected';
+                status.innerHTML = '<span class="status-dot"></span> 未连接';
+                connectBtn.disabled = false;
+                disconnectBtn.disabled = true;
+            }
+        }
+
+        function connectSSE() {
+            if (eventSource) {
+                eventSource.close();
+            }
+
+            const url = `${getBaseUrl()}/sse`;
+            log('info', `正在连接 SSE: ${url}`);
+
+            try {
+                eventSource = new EventSource(url);
+
+                eventSource.onopen = () => {
+                    log('success', 'SSE 连接已建立');
+                    updateConnectionStatus(true);
+                };
+
+                eventSource.onmessage = (event) => {
+                    try {
+                        const data = JSON.parse(event.data);
+                        log('sse', 'SSE 消息', data);
+                    } catch (e) {
+                        log('sse', `SSE 消息: ${event.data}`);
+                    }
+                };
+
+                eventSource.onerror = (error) => {
+                    log('error', 'SSE 连接错误');
+                    updateConnectionStatus(false);
+                    eventSource.close();
+                    eventSource = null;
+                };
+            } catch (error) {
+                log('error', `连接失败: ${error.message}`);
+            }
+        }
+
+        function disconnectSSE() {
+            if (eventSource) {
+                eventSource.close();
+                eventSource = null;
+                log('info', 'SSE 连接已断开');
+                updateConnectionStatus(false);
+            }
+        }
+
+        async function sendRequest(method, params = null) {
+            const request = {
+                jsonrpc: '2.0',
+                id: requestId++,
+                method: method
+            };
+            if (params) {
+                request.params = params;
+            }
+
+            log('request', `发送请求: ${method}`, request);
+
+            try {
+                const response = await fetch(`${getBaseUrl()}/message`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(request)
+                });
+
+                if (response.status === 204) {
+                    log('success', '请求成功 (无响应内容)');
+                    return null;
+                }
+
+                const data = await response.json();
+                
+                if (data.error) {
+                    log('error', `错误响应`, data);
+                } else {
+                    log('response', '收到响应', data);
+                }
+                
+                return data;
+            } catch (error) {
+                log('error', `请求失败: ${error.message}`);
+                return null;
+            }
+        }
+
+        async function checkHealth() {
+            log('info', '检查健康状态...');
+            try {
+                const response = await fetch(`${getBaseUrl()}/health`);
+                const data = await response.json();
+                log('success', '健康检查成功', data);
+            } catch (error) {
+                log('error', `健康检查失败: ${error.message}`);
+            }
+        }
+
+        async function sendInitialize() {
+            await sendRequest('initialize', {
+                protocolVersion: '2024-11-05',
+                capabilities: {},
+                clientInfo: {
+                    name: 'test-client',
+                    version: '1.0.0'
+                }
+            });
+        }
+
+        async function sendToolsList() {
+            await sendRequest('tools/list');
+        }
+
+        async function callHITLTool() {
+            const reason = document.getElementById('reason').value;
+            const workspace = document.getElementById('workspace').value;
+
+            if (!reason || !workspace) {
+                log('error', '请填写 reason 和 workspace');
+                return;
+            }
+
+            log('info', '调用 AI_chat_HITL 工具，等待用户响应...');
+            
+            await sendRequest('tools/call', {
+                name: 'AI_chat_HITL',
+                arguments: {
+                    reason: reason,
+                    workspace: workspace
+                }
+            });
+        }
+
+        // Initial log
+        log('info', '测试工具已加载，请先连接 SSE 或直接发送请求');
+    </script>
+</body>
+</html>

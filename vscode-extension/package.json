@@ -1,0 +1,102 @@
+{
+  "name": "ai-chat-hitl-extension",
+  "displayName": "AI Chat HITL Extension",
+  "description": "VSCode extension for AI chat human-in-the-loop continuation with MCP Server",
+  "version": "1.17.0",
+  "publisher": "ai-chat-hitl",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "ai-chat-hitl-sidebar",
+          "title": "AI Chat HITL",
+          "icon": "$(comment-discussion)"
+        }
+      ]
+    },
+    "views": {
+      "ai-chat-hitl-sidebar": [
+        {
+          "type": "webview",
+          "id": "ai-chat-hitl.sidebarView",
+          "name": "AI Chat HITL"
+        }
+      ]
+    },
+    "commands": [
+      {
+        "command": "ai-chat-hitl.showStatus",
+        "title": "AI Chat HITL: Show Status"
+      },
+      {
+        "command": "ai-chat-hitl.generateRules",
+        "title": "AI Chat HITL: Generate Rules File"
+      },
+      {
+        "command": "ai-chat-hitl.configureMCP",
+        "title": "AI Chat HITL: Configure MCP"
+      },
+      {
+        "command": "ai-chat-hitl.changePort",
+        "title": "AI Chat HITL: Change Port"
+      },
+      {
+        "command": "ai-chat-hitl.restartServer",
+        "title": "AI Chat HITL: Restart Server"
+      },
+      {
+        "command": "ai-chat-hitl.stopServer",
+        "title": "AI Chat HITL: Stop Server"
+      },
+      {
+        "command": "ai-chat-hitl.quickSetup",
+        "title": "AI Chat HITL: Quick Setup (一键配置)"
+      },
+      {
+        "command": "ai-chat-hitl.openDialog",
+        "title": "AI Chat HITL: Open Dialog (打开对话窗口)"
+      },
+      {
+        "command": "ai-chat-hitl.showPendingDialogs",
+        "title": "AI Chat HITL: Show Pending Dialogs (显示待处理对话)"
+      }
+    ],
+    "configuration": {
+      "title": "AI Chat HITL",
+      "properties": {
+        "ai-chat-hitl.serverPort": {
+          "type": "number",
+          "default": 23987,
+          "description": "MCP Server HTTP port"
+        },
+        "ai-chat-hitl.openDialogInBrowser": {
+          "type": "boolean",
+          "default": true,
+          "description": "在浏览器中打开对话框（独立窗口），而不是编辑器标签页"
+        }
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "package": "vsce package"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.0",
+    "@types/vscode": "^1.85.0",
+    "typescript": "^5.3.0",
+    "@vscode/vsce": "^2.22.0"
+  }
+}
