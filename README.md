@@ -65,7 +65,7 @@ Ai-Chat-HITL/
 
 ```bash
 # 1. 克隆仓库
-git clone https://github.com/gongchyu/Ai-Chat-HITL.git
+git clone https://github.com/gongchyu-collab/Ai-Chat-HITL.git
 
 # 2. 进入插件目录
 cd Ai-Chat-HITL/vscode-extension
