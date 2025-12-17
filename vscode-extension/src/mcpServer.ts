@@ -807,6 +807,21 @@ export class MCPServer {
         const workspace = '${pending.workspace.replace(/\\/g, '\\\\')}';
         let attachments = [];
         
+        // 使用 BroadcastChannel 管理同工作区的标签页，打开新的时关闭旧的
+        const dialogChannel = new BroadcastChannel('ai_chat_hitl_dialog_' + workspace.replace(/[^a-zA-Z0-9]/g, '_'));
+        
+        // 监听其他标签页的消息
+        dialogChannel.onmessage = (event) => {
+            if (event.data.type === 'new_dialog_opened' && event.data.dialogId !== currentDialogId) {
+                // 有新的对话框打开了，关闭当前标签页
+                dialogChannel.close();
+                window.close();
+            }
+        };
+        
+        // 通知其他标签页：我是新打开的对话框
+        dialogChannel.postMessage({ type: 'new_dialog_opened', dialogId: currentDialogId });
+        
         // 文件处理
         function readFileAsBase64(file, type) {
             return new Promise((resolve) => {

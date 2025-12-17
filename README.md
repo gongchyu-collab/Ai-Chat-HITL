@@ -2,7 +2,7 @@
 
 一个用于 AI 对话人工介入 (Human-in-the-Loop) 控制的 VSCode 插件，集成了 MCP Server。
 
-## 功能
+## 功能特性
 
 - **AI_chat_HITL 工具**: AI 在回答结束时调用此工具，询问用户是否继续对话
 - **人工中断恢复**: 用户可以选择继续对话并输入新指令，或结束对话
@@ -19,39 +19,79 @@
 ## 项目结构
 
 ```
-mcp_tool/
-├── vscode-extension/           # VSCode 插件 (集成 MCP Server)
+Ai-Chat-HITL/
+├── vscode-extension/                      # VSCode 插件 (集成 MCP Server)
 │   ├── src/
-│   │   ├── extension.ts        # 插件主入口
-│   │   ├── mcpServer.ts        # 内置 HTTP 服务器
-│   │   ├── mcpServerStandalone.ts  # 独立 MCP Server (供外部调用)
-│   │   ├── dialogPanel.ts      # 对话面板 UI
-│   │   ├── sidebarPanel.ts     # 侧边栏面板
-│   │   └── configManager.ts    # 配置管理
-│   ├── dist/                   # 编译后的文件
-│   ├── ai-chat-hitl-extension-1.2.0.vsix  # 可安装的插件包
+│   │   ├── extension.ts                   # 插件主入口
+│   │   ├── mcpServer.ts                   # 内置 HTTP 服务器
+│   │   ├── mcpServerStandalone.ts         # 独立 MCP Server (供外部调用)
+│   │   ├── dialogPanel.ts                 # 对话面板 UI
+│   │   ├── sidebarPanel.ts                # 侧边栏面板
+│   │   └── configManager.ts               # 配置管理
+│   ├── ai-chat-hitl-extension-1.21.0.vsix # 可直接安装的插件包
 │   ├── package.json
 │   └── tsconfig.json
-├── .AichatHITLrules            # AI 对话规则示例
+├── .AichatHITLrules                       # AI 对话规则示例
 └── README.md
 ```
 
-## 安装
+---
 
-### 方式一：安装 VSIX 文件
+## 安装指南
 
-1. 下载 `vscode-extension/ai-chat-hitl-extension-1.4.0.vsix`
-2. 在 VSCode/Windsurf/Cursor 中按 `Ctrl+Shift+P`
-3. 输入 "Install from VSIX" 并选择下载的文件
+### 方式一：直接安装 VSIX 文件（推荐）
 
-### 方式二：从源码构建
+这是最简单的安装方式，无需编译源码。
+
+**步骤：**
+
+1. 下载本仓库中的 `vscode-extension/ai-chat-hitl-extension-1.21.0.vsix` 文件
+2. 打开 VSCode / Windsurf / Cursor
+3. 按 `Ctrl+Shift+P` (Mac: `Cmd+Shift+P`) 打开命令面板
+4. 输入 `Extensions: Install from VSIX...` 并选择
+5. 选择下载的 `.vsix` 文件
+6. 重启编辑器即可使用
+
+### 方式二：从源码构建安装
+
+如果你需要自定义修改或者想使用最新的开发版本，可以从源码构建。
+
+**环境要求：**
+
+- Node.js >= 16.x
+- npm >= 8.x
+
+**步骤：**
 
 ```bash
-cd vscode-extension
+# 1. 克隆仓库
+git clone https://github.com/gongchyu/Ai-Chat-HITL.git
+
+# 2. 进入插件目录
+cd Ai-Chat-HITL/vscode-extension
+
+# 3. 安装依赖
 npm install
+
+# 4. 编译 TypeScript 源码
 npm run compile
+
+# 5. 打包成 VSIX 文件
 npm run package
+
+# 打包完成后会生成 ai-chat-hitl-extension-x.x.x.vsix 文件
 ```
+
+**安装打包后的插件：**
+
+```bash
+# 方法一：使用命令行安装
+code --install-extension ai-chat-hitl-extension-1.21.0.vsix
+
+# 方法二：在编辑器中手动安装（同方式一的步骤3-5）
+```
+
+---
 
 ## 配置 MCP
 

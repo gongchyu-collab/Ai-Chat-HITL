@@ -1,4 +1,5 @@
 node_modules/
 dist/
-*.vsix
 .vscode-test/
+# 保留发布的vsix文件用于分发
+# *.vsix

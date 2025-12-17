@@ -13,9 +13,6 @@ let extensionContext: vscode.ExtensionContext;
 // 持久化存储键
 const PENDING_DIALOGS_KEY = 'ai-chat-hitl.pendingDialogs';
 
-// 跟踪已打开浏览器窗口的工作区（避免重复打开）
-const openBrowserWindows = new Map<string, number>(); // workspace -> lastOpenTime
-
 // 获取插件版本
 function getExtensionVersion(context: vscode.ExtensionContext): string {
     const extension = vscode.extensions.getExtension('ai-chat-hitl.ai-chat-hitl-extension');
@@ -287,18 +284,9 @@ function handleDialogRequest(context: vscode.ExtensionContext, dialog: PendingDi
     const port = config.get<number>('serverPort', 23987);
 
     if (openInBrowser) {
-        // 检查该工作区是否已有浏览器窗口打开（5分钟内打开过则跳过）
-        const workspaceKey = dialog.workspace.toLowerCase().replace(/\\/g, '/');
-        const lastOpenTime = openBrowserWindows.get(workspaceKey) || 0;
-        const now = Date.now();
-        
-        if (now - lastOpenTime > 5 * 60 * 1000) {
-            // 超过5分钟或首次，打开新窗口
-            const dialogUrl = vscode.Uri.parse(`http://127.0.0.1:${port}/dialog/${dialog.id}`);
-            vscode.env.openExternal(dialogUrl);
-            openBrowserWindows.set(workspaceKey, now);
-        }
-        // 否则跳过，让现有浏览器标签页通过轮询获取新对话
+        // 每个新对话都打开独立窗口（不同会话标签页需要独立窗口）
+        const dialogUrl = vscode.Uri.parse(`http://127.0.0.1:${port}/dialog/${dialog.id}`);
+        vscode.env.openExternal(dialogUrl);
     } else {
         // 在编辑器标签页中打开
         DialogPanel.createOrShow(
